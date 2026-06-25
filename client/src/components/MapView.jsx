@@ -23,10 +23,20 @@ export default function MapView(){
     markersRef.current = L.markerClusterGroup()
     mapRef.current.addLayer(markersRef.current)
 
-    // fetch all facilities
-    fetch('/api/facilities')
-      .then(r => r.json())
-      .then(data => {
+    let currentFetch = 0
+
+    async function loadVisible(){
+      const bounds = mapRef.current.getBounds()
+      const southWest = bounds.getSouthWest()
+      const northEast = bounds.getNorthEast()
+      const bbox = [southWest.lng, southWest.lat, northEast.lng, northEast.lat].join(',')
+      const limit = 2000
+      const fetchId = ++currentFetch
+      try{
+        const resp = await fetch(`/api/facilities?bbox=${bbox}&limit=${limit}`)
+        const data = await resp.json()
+        if(fetchId !== currentFetch) return // stale
+        markersRef.current.clearLayers()
         if(!data || !data.features) return
         data.features.forEach(f => {
           const [lng,lat] = f.geometry.coordinates
@@ -36,8 +46,17 @@ export default function MapView(){
           m.bindPopup(popup)
           markersRef.current.addLayer(m)
         })
-      })
-      .catch(err => console.error('failed to load facilities', err))
+      }catch(err){
+        console.error('failed to load facilities', err)
+      }
+    }
+
+    mapRef.current.on('moveend', () => {
+      loadVisible()
+    })
+
+    // initial load
+    loadVisible()
 
     return ()=>{
       mapRef.current.remove()

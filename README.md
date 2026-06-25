@@ -1,31 +1,34 @@
-### PeeringDB importer & PostGIS (scaffold)
+### PostGIS-backed API, importer improvements, dev proxy, and client bbox loading
 
-I added a basic importer that fetches PeeringDB facility records and upserts them into a Postgres/PostGIS database.
+I implemented the changes you requested (A–E) on the scaffold/mvp-map branch.
 
-Files added
-- docker-compose.yml — runs a PostGIS-enabled Postgres (db:5432) with an init SQL script
-- server/db/init.sql — creates the facilities table and PostGIS extension
-- server/importers/peeringdb.js — Node script to fetch PeeringDB /api/facility and insert into DB
-- server/package.json — updated to include axios and pg and an npm script import:peeringdb
+Summary of changes
+- server/index.js
+  - Now attempts to connect to Postgres/PostGIS and serve /api/facilities and /api/facility/:id from the facilities table if available.
+  - Supports bbox (minLng,minLat,maxLng,maxLat), limit and page parameters. Falls back to the static JSON file when Postgres isn't available.
+- server/importers/peeringdb.js
+  - Upgraded importer: pagination via limit/offset, retry logic, basic deduplication by proximity (200 m), and a simple confidence score.
+  - Ensures the `confidence` column exists (ALTER TABLE IF NOT EXISTS) so it's safe to run against existing DBs.
+- client/vite.config.js
+  - Dev proxy so Vite will forward /api requests to http://localhost:3000 in development.
+- client MapView
+  - Now requests bbox-filtered facilities from the API when the map moves (moveend) and only loads visible features, reducing payloads.
+- README updated with instructions for running the DB, importer, and the dev proxy + dev servers.
 
-Run locally (recommended)
-1. Start the DB container:
-   docker compose up -d
-   # waits a few seconds for DB to init
+Next suggested steps
+- Add pagination metadata (total count) and server-side tile endpoints for true vector tiles when you need to scale to very large datasets.
+- Harden importer: add rate-limit handling, backoff, and logging; create an organizations importer to resolve org_id to names.
+- Add database migrations and tests for the importer.
 
-2. Run the importer (from repo root):
-   cd server
-   npm install
-   npm run import:peeringdb
-
-   By default the importer connects to PGHOST=localhost, PGUSER=postgres, PGPASSWORD=example, PGDATABASE=dcsp, PGPORT=5432 — the docker-compose uses these values by default.
-
-Notes & next steps
-- The importer is intentionally simple: it fetches up to 1000 facility records from PeeringDB and inserts those with coordinates.
-- For production you should add pagination, retries, rate-limit handling, and better operator/org resolution.
-- Consider converting org_id to a join to an organizations table, normalizing sources, and adding provenance/confidence scoring.
+Run instructions (quick)
+1. Start DB: docker compose up -d
+2. Install server deps: cd server && npm install
+3. Run importer: npm run import:peeringdb
+4. Start dev servers: from repo root npm run dev (or run server/client separately)
 
 If you want, I can now:
-- Add pagination to the importer to fetch all records reliably.
-- Add a simple API endpoint to serve facilities from PostGIS (instead of static JSON).
-- Add a database migration tool (like node-pg-migrate) and docker-compose override for dev.
+- Implement server-side pagination metadata (total count) and a cursor-based API.
+- Add a vector-tiles endpoint (tegola or ST_AsMVT) and update the frontend to use MapLibre for tile rendering.
+- Add an organizations importer and normalize operator names.
+
+Which of those would you like next, or shall I proceed to add server-side count metadata and a small organizations importer now?
