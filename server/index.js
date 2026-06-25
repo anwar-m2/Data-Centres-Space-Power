@@ -55,61 +55,85 @@ app.get('/api/facilities', async (req, res) => {
     await client.connect();
   }catch(e){
     // no postgres available, fallback to static JSON
-    if(!facilities) return res.status(500).json({ error: 'no data available' });
+    if(!facilities) return res.status(500).json({ error: 'data not loaded' });
     if(!bbox) return res.json(facilities);
     const [minLng,minLat,maxLng,maxLat] = bbox;
     const features = facilities.features.filter(f => {
       const [lng,lat] = f.geometry.coordinates;
       return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
     });
-    return res.json({ type: 'FeatureCollection', features });
+    return res.json({ type: 'FeatureCollection', features, meta: { total: features.length, page, limit } });
   }
 
   try{
-    // ensure PostGIS extension/table exists is expected from docker init; simple query
-    let rows;
+    // total count
+    let total = 0;
     if(bbox){
       const [minLng,minLat,maxLng,maxLat] = bbox;
-      const sql = `SELECT pdb_id as id, name, operator, country, source, raw, last_updated, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat
+      const countSql = `SELECT COUNT(*)::int AS cnt FROM facilities WHERE geom && ST_MakeEnvelope($1,$2,$3,$4,4326)`;
+      const cntRes = await client.query(countSql, [minLng, minLat, maxLng, maxLat]);
+      total = cntRes.rows[0].cnt;
+
+      const sql = `SELECT pdb_id as id, name, operator, country, source, raw, last_updated, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat,
+                          (SELECT name FROM organizations o WHERE o.org_id = (CASE WHEN facilities.operator ~ '^[0-9]+$' THEN (facilities.operator)::int ELSE NULL END) LIMIT 1) as operator_name
                    FROM facilities
                    WHERE geom && ST_MakeEnvelope($1,$2,$3,$4,4326)
                    LIMIT $5 OFFSET $6`;
       const resp = await client.query(sql, [minLng, minLat, maxLng, maxLat, limit, offset]);
-      rows = resp.rows;
+      const rows = resp.rows;
+      const features = rows.map(r => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [Number(r.lon), Number(r.lat)] },
+        properties: {
+          id: r.id,
+          name: r.name,
+          operator: r.operator,
+          operator_name: r.operator_name,
+          country: r.country,
+          source: r.source,
+          raw: r.raw,
+          last_updated: r.last_updated
+        }
+      }));
+      return res.json({ type: 'FeatureCollection', features, meta: { total, page, limit } });
     }else{
-      const sql = `SELECT pdb_id as id, name, operator, country, source, raw, last_updated, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat
+      const countSql = `SELECT COUNT(*)::int AS cnt FROM facilities`;
+      const cntRes = await client.query(countSql);
+      total = cntRes.rows[0].cnt;
+
+      const sql = `SELECT pdb_id as id, name, operator, country, source, raw, last_updated, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat,
+                          (SELECT name FROM organizations o WHERE o.org_id = (CASE WHEN facilities.operator ~ '^[0-9]+$' THEN (facilities.operator)::int ELSE NULL END) LIMIT 1) as operator_name
                    FROM facilities
                    LIMIT $1 OFFSET $2`;
       const resp = await client.query(sql, [limit, offset]);
-      rows = resp.rows;
+      const rows = resp.rows;
+      const features = rows.map(r => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [Number(r.lon), Number(r.lat)] },
+        properties: {
+          id: r.id,
+          name: r.name,
+          operator: r.operator,
+          operator_name: r.operator_name,
+          country: r.country,
+          source: r.source,
+          raw: r.raw,
+          last_updated: r.last_updated
+        }
+      }));
+      return res.json({ type: 'FeatureCollection', features, meta: { total, page, limit } });
     }
-
-    const features = rows.map(r => ({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: [Number(r.lon), Number(r.lat)] },
-      properties: {
-        id: r.id,
-        name: r.name,
-        operator: r.operator,
-        country: r.country,
-        source: r.source,
-        raw: r.raw,
-        last_updated: r.last_updated
-      }
-    }));
-
-    return res.json({ type: 'FeatureCollection', features });
   }catch(err){
     console.error('DB query error', err.message || err);
     // fallback to static JSON
     if(!facilities) return res.status(500).json({ error: 'no data available' });
-    if(!bbox) return res.json(facilities);
+    if(!bbox) return res.json({ type: 'FeatureCollection', features: facilities.features, meta: { total: facilities.features.length, page, limit } });
     const [minLng,minLat,maxLng,maxLat] = bbox;
     const features = facilities.features.filter(f => {
       const [lng,lat] = f.geometry.coordinates;
       return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
     });
-    return res.json({ type: 'FeatureCollection', features });
+    return res.json({ type: 'FeatureCollection', features, meta: { total: features.length, page, limit } });
   }finally{
     try{ await client.end(); }catch(e){}
   }
@@ -129,7 +153,9 @@ app.get('/api/facility/:id', async (req, res) => {
   }
 
   try{
-    const sql = `SELECT pdb_id as id, name, operator, country, source, raw, last_updated, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat FROM facilities WHERE pdb_id = $1 LIMIT 1`;
+    const sql = `SELECT pdb_id as id, name, operator, country, source, raw, last_updated, ST_X(geom::geometry) as lon, ST_Y(geom::geometry) as lat,
+                        (SELECT name FROM organizations o WHERE o.org_id = (CASE WHEN facilities.operator ~ '^[0-9]+$' THEN (facilities.operator)::int ELSE NULL END) LIMIT 1) as operator_name
+                 FROM facilities WHERE pdb_id = $1 LIMIT 1`;
     const resp = await client.query(sql, [id]);
     if(!resp.rows.length){
       const f = facilities && facilities.features.find(ff => String(ff.properties.id) === String(id));
@@ -137,7 +163,7 @@ app.get('/api/facility/:id', async (req, res) => {
       return res.json(f);
     }
     const r = resp.rows[0];
-    const feature = { type: 'Feature', geometry: { type: 'Point', coordinates: [Number(r.lon), Number(r.lat)] }, properties: { id: r.id, name: r.name, operator: r.operator, country: r.country, source: r.source, raw: r.raw, last_updated: r.last_updated } };
+    const feature = { type: 'Feature', geometry: { type: 'Point', coordinates: [Number(r.lon), Number(r.lat)] }, properties: { id: r.id, name: r.name, operator: r.operator, operator_name: r.operator_name, country: r.country, source: r.source, raw: r.raw, last_updated: r.last_updated } };
     return res.json(feature);
   }catch(err){
     console.error('DB lookup error', err.message || err);

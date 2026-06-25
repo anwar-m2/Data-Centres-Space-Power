@@ -15,3 +15,16 @@ CREATE TABLE IF NOT EXISTS facilities (
 );
 
 CREATE INDEX IF NOT EXISTS idx_facilities_geom ON facilities USING GIST(geom);
+
+-- Organizations table to store PeeringDB organizations and metadata
+CREATE TABLE IF NOT EXISTS organizations (
+  id serial PRIMARY KEY,
+  org_id integer UNIQUE,
+  name text,
+  aka jsonb,
+  website text,
+  raw jsonb,
+  last_updated timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS idx_organizations_org_id ON organizations (org_id);

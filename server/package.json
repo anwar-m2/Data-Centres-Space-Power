@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "import:peeringdb": "node importers/peeringdb.js"
+    "import:peeringdb": "node importers/peeringdb.js",
+    "import:orgs": "node importers/orgs.js"
   },
   "dependencies": {
     "axios": "^1.4.0",
