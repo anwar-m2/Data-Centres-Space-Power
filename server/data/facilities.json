@@ -1,0 +1,55 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-0.126, 51.500] },
+      "properties": { "id": "dc-001", "name": "London Data Centre A", "operator": "ExampleCo", "country": "GB", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-74.006, 40.7128] },
+      "properties": { "id": "dc-002", "name": "New York DC", "operator": "ExampleCo", "country": "US", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [2.3522, 48.8566] },
+      "properties": { "id": "dc-003", "name": "Paris Data Centre", "operator": "ExampleCo", "country": "FR", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [139.6917, 35.6895] },
+      "properties": { "id": "dc-004", "name": "Tokyo Edge Facility", "operator": "EdgeCorp", "country": "JP", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [151.2093, -33.8688] },
+      "properties": { "id": "dc-005", "name": "Sydney Colocation", "operator": "AussieData", "country": "AU", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [103.8198, 1.3521] },
+      "properties": { "id": "dc-006", "name": "Singapore Tier-3", "operator": "SEA Hosts", "country": "SG", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [28.9784, 41.0082] },
+      "properties": { "id": "dc-007", "name": "Istanbul Facility", "operator": "EurasiaNet", "country": "TR", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [37.6173, 55.7558] },
+      "properties": { "id": "dc-008", "name": "Moscow Data Centre", "operator": "RusHost", "country": "RU", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-43.1729, -22.9068] },
+      "properties": { "id": "dc-009", "name": "Rio de Janeiro DC", "operator": "LatAmColo", "country": "BR", "source": "sample" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [18.4241, -33.9249] },
+      "properties": { "id": "dc-010", "name": "Cape Town Colocation", "operator": "AfricaHosts", "country": "ZA", "source": "sample" }
+    }
+  ]
+}

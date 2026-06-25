@@ -1,0 +1,12 @@
+{
+  "name": "data-centres-space-power",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "concurrently \"npm --prefix server run dev\" \"npm --prefix client run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
